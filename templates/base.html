@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Mộc Đông Handmade Soap{% endblock %}</title>
+<meta name="description" content="{% block desc %}Xà phòng handmade Mộc Đông: Yến mạch & Nho, làm sạch nhẹ nhàng và nuôi dưỡng da. Made in Vietnam.{% endblock %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Quicksand:wght@500;700&family=Source+Sans+3:wght@400;600&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% block head %}{% endblock %}
+</head>
+<body>
+<header class="nav">
+  <a class="logo" href="{{ url_for('main.index') }}">{{ brand }}</a>
+  <nav>
+    <a href="{{ url_for('main.product') }}">Sản phẩm</a>
+    <a href="{{ url_for('main.howto') }}">Hướng dẫn</a>
+    <a href="{{ url_for('main.about') }}">Câu chuyện</a>
+    {% if current_user %}
+      {% if learning_active %}
+      <a class="nav-learn" href="{{ url_for('learning.edp_home') }}">Học EDP <span class="days-pill">còn {{ learning_days_left }} ngày</span></a>
+      {% else %}
+      <a class="nav-learn" href="{{ url_for('learning.activate') }}">Kích hoạt học tập</a>
+      {% endif %}
+    {% endif %}
+  </nav>
+  <div class="nav-user">
+    {% if current_user %}
+    <span class="user-chip">
+      {% if current_user.photo_url %}
+      <img class="avatar" src="{{ current_user.photo_url }}" alt="" referrerpolicy="no-referrer">
+      {% else %}
+      <span class="avatar" aria-hidden="true">{{ (current_user.full_name or current_user.email or '?')[:1]|upper }}</span>
+      {% endif %}
+      <span class="user-name">{{ current_user.full_name or current_user.email }}</span>
+    </span>
+    <button type="button" class="btn ghost sm" id="logout-btn">Đăng xuất</button>
+    {% else %}
+    <a class="btn sm" href="{{ url_for('auth.login', next=request.path) }}">Đăng nhập / Đăng ký</a>
+    {% endif %}
+  </div>
+</header>
+{% with msgs = get_flashed_messages(with_categories=true) %}
+{% if msgs %}
+<div class="flash-wrap" aria-live="polite">
+  {% for cat, m in msgs %}<p class="form-msg {{ 'ok' if cat == 'ok' else 'error' }}" role="status">{{ m }}</p>{% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+<main>{% block content %}{% endblock %}</main>
+<footer class="footer">
+  <p>{{ brand }} Handmade Soap · Made in Vietnam</p>
+  <p class="script">{{ slogan }}</p>
+</footer>
+{% include "components/chatbot.html" %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

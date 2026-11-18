@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% block title %}Hồ sơ Tổng kết & Xuất PDF · {{ brand }}{% endblock %}
+{% block head %}
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+{% set eval_obj = (saved_eval if saved_eval is defined and saved_eval else (evaluation if evaluation is defined and evaluation else (progress.evaluation if progress is defined and progress.evaluation is defined else {}))) %}
+{% set ans_map = eval_obj.feedback_answers if eval_obj and eval_obj.feedback_answers is defined else {} %}
+{% set r1_data = eval_obj.rubric_1 if eval_obj and eval_obj.rubric_1 is defined else {} %}
+{% set r2_data = eval_obj.rubric_2 if eval_obj and eval_obj.rubric_2 is defined else {} %}
+{% set r1_scores = r1_data.scores if r1_data and r1_data.scores is defined else {} %}
+{% set r2_scores = r2_data.scores if r2_data and r2_data.scores is defined else {} %}
+{% set quiz_map = (quizzes if quizzes is defined and quizzes else (progress.quizzes if progress is defined and progress.quizzes is defined else {})) %}
+{% set cur_user = (user if user is defined and user else (session.get('user') if session is defined else {})) %}
+{% set student_name = cur_user.get('name') or cur_user.get('display_name') or cur_user.get('email') or 'Hoc_Vien_Moc_Dong' %}
+
+{% set r1_total = r1_data.total if r1_data and r1_data.total is defined else 0 %}
+{% set r2_total = r2_data.total if r2_data and r2_data.total is defined else 0 %}
+{% set r1_grade = r1_data.grade if r1_data and r1_data.grade is defined else 'Chưa chấm' %}
+{% set r2_grade = r2_data.grade if r2_data and r2_data.grade is defined else 'Chưa chấm' %}
+
+{% set ns = namespace(q_score=0, q_total=0, strong_steps=[], weak_steps=[], strong_skills=[], weak_skills=[]) %}
+{% for s in steps %}
+  {% set q_item = quiz_map.get(s.n|string) or quiz_map.get(s.n) %}
+  {% if q_item and q_item.total %}
+    {% set ns.q_score = ns.q_score + (q_item.score|int) %}
+    {% set ns.q_total = ns.q_total + (q_item.total|int) %}
+    {% if (q_item.score|int) * 4 >= (q_item.total|int) * 3 %}
+      {% set ns.strong_steps = ns.strong_steps + [{'n': s.n, 'en': s.en, 'title': s.title, 'score': q_item.score, 'total': q_item.total}] %}
+    {% else %}
+      {% set ns.weak_steps = ns.weak_steps + [{'n': s.n, 'en': s.en, 'title': s.title, 'score': q_item.score, 'total': q_item.total}] %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+
+{% for c in rubric_1.criteria %}
+  {% set val = r1_scores.get(c.key, 0)|int %}
+  {% if val >= 3 %}
+    {% set ns.strong_skills = ns.strong_skills + [{'label': c.label, 'pts': val, 'desc': c.levels[val - 1]}] %}
+  {% elif val > 0 %}
+    {% set ns.weak_skills = ns.weak_skills + [{'key': c.key, 'label': c.label, 'pts': val, 'desc': c.levels[val - 1]}] %}
+  {% endif %}
+{% endfor %}
+
+{% for c in rubric_2.criteria %}
+  {% set val = r2_scores.get(c.key, 0)|int %}
+  {% if val >= 3 %}
+    {% set ns.strong_skills = ns.strong_skills + [{'label': c.label, 'pts': val, 'desc': c.levels[val - 1]}] %}
+  {% elif val > 0 %}
+    {% set ns.weak_skills = ns.weak_skills + [{'key': c.key, 'label': c.label, 'pts': val, 'desc': c.levels[val - 1]}] %}
+  {% endif %}
+{% endfor %}
+
+<section class="section edp-wrap pdf-sheet">
+  <div class="summary-topbar no-print" data-html2pdf-ignore="true">
+    <a class="back-link" href="{{ url_for('learning.edp_home') }}">← Tổng quan 5 bước</a>
+    <div class="action-right">
+      <a class="btn ghost sm" href="{{ url_for('learning.edp_step', n=5) }}">✏️ Sửa phiếu Bước 5</a>
+      <button type="button" class="btn ghost sm" onclick="window.print()">🖨️ In hồ sơ</button>
+      <button type="button" class="btn sm" id="btn-download-pdf" data-student="{{ student_name }}">⬇️ Tải file PDF</button>
+    </div>
+  </div>
+
+  <!-- VÙNG XUẤT PDF GIỮ NGUYÊN GIAO DIỆN WEB -->
+  <div id="pdf-export-area" class="pdf-export-area">
+    <!-- TIÊU ĐỀ HỒ SƠ CHÍNH THỨC -->
+    <header class="card pdf-banner pdf-block">
+      <div class="pdf-banner-top">
+        <div>
+          <span class="pdf-kicker">MỘC ĐÔNG · GIÁO DỤC STEM & TÁI CHẾ XANH</span>
+          <h1>Hồ Sơ Tổng Kết Thực Hành Quy Trình EDP</h1>
+          <p class="pdf-sub">Dự án: Tái chế dầu ăn thải thành xà phòng nho thủ công an toàn</p>
+        </div>
+        <div class="pdf-seal">
+          <b>{{ progress.completed_count }}/{{ total }} BƯỚC</b>
+          <span>{{ progress.percent }}% Hoàn thành</span>
+        </div>
+      </div>
+
+      <div class="student-meta-grid">
+        <div class="meta-cell">
+          <small>Học sinh thực hiện</small>
+          <b>{{ cur_user.get('name') or cur_user.get('display_name') or cur_user.get('email') or 'Học viên Mộc Đông' }}</b>
+        </div>
+        <div class="meta-cell">
+          <small>Lớp</small>
+          <b>{{ ans_map.get('class_name') or 'Chưa cập nhật' }}</b>
+        </div>
+        <div class="meta-cell">
+          <small>Trường</small>
+          <b>{{ ans_map.get('school') or 'Chưa cập nhật' }}</b>
+        </div>
+        <div class="meta-cell">
+          <small>Xếp loại tổng hợp</small>
+          <b>{{ r1_grade }} · {{ r2_grade }}</b>
+        </div>
+      </div>
+    </header>
+
+    <!-- 4 THẺ CHỈ SỐ TỔNG QUAN -->
+    <div class="kpi-grid pdf-block">
+      <div class="kpi-card">
+        <small>Tiến độ EDP</small>
+        <strong>{{ progress.completed_count }}/{{ total }}</strong>
+        <span>Hoàn thành {{ progress.percent }}% lộ trình</span>
+      </div>
+      <div class="kpi-card">
+        <small>Trắc nghiệm 5 bước</small>
+        <strong>{{ ns.q_score }}/{{ ns.q_total if ns.q_total > 0 else 21 }}</strong>
+        <span>{{ ((ns.q_score * 100 / ns.q_total)|round|int) if ns.q_total > 0 else 0 }}% câu trả lời đúng</span>
+      </div>
+      <div class="kpi-card accent-olive">
+        <small>Chất lượng sản phẩm</small>
+        <strong>{{ r1_total }}/20 đ</strong>
+        <span class="badge-score">{{ r1_grade }}</span>
+      </div>
+      <div class="kpi-card accent-grape">
+        <small>Năng lực quy trình EDP</small>
+        <strong>{{ r2_total }}/20 đ</strong>
+        <span class="badge-score">{{ r2_grade }}</span>
+      </div>
+    </div>
+
+    <!-- SẢN PHẨM THÀNH PHẨM & KẾT QUẢ TỪNG BƯỚC -->
+    <article class="card edp-sec pdf-block">
+      <h2>🧪 Thành phẩm thực tế & Kết quả từng bước EDP</h2>
+      <div class="summary-product-grid">
+        <div class="summary-photo">
+          {% if eval_obj and eval_obj.image_url %}
+          <img id="summary-soap-img" src="{{ eval_obj.image_url }}" alt="Ảnh bánh xà phòng thành phẩm của học sinh">
+          <small class="photo-cap">Ảnh chụp bánh xà phòng nho thành phẩm sau ủ chín</small>
+          {% else %}
+          <div class="img-placeholder">
+            <span>🧼 Chưa tải ảnh thành phẩm</span>
+            <small>Vui lòng cập nhật ảnh tại Bước 5</small>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="step-score-list">
+          {% for s in steps %}
+          {% set q_item = quiz_map.get(s.n|string) or quiz_map.get(s.n) %}
+          {% set is_step_done = s.n in progress.completed_steps %}
+          {% set pct = ((q_item.score * 100 / q_item.total)|round|int) if (q_item and q_item.total) else (100 if is_step_done else 0) %}
+          <div class="step-score-row">
+            <div class="step-score-head">
+              <span><b>Bước {{ s.n }} ({{ s.en }}):</b> {{ s.title }}</span>
+              {% if q_item and q_item.total %}
+              <span class="step-pill {{ 'ok' if pct >= 75 else 'warn' }}">{{ q_item.score }}/{{ q_item.total }} câu</span>
+              {% elif is_step_done %}
+              <span class="step-pill ok">Đã xong</span>
+              {% else %}
+              <span class="step-pill">Chưa học</span>
+              {% endif %}
+            </div>
+            <div class="mini-bar"><i data-width="{{ pct }}"></i></div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </article>
+
+    <!-- ĐÁNH GIÁ HIỆU QUẢ HỌC TẬP CỦA HỌC SINH -->
+    <article class="card edp-sec eval-report-card pdf-block">
+      <div class="sec-head-row">
+        <div>
+          <h2>🎓 Đánh giá hiệu quả học tập của học sinh</h2>
+          <p class="note">Tổng hợp tự động từ điểm kiểm tra 5 bước, 2 bảng Rubric và nhật ký tự phản hồi.</p>
+        </div>
+        <span class="grade-pill">Tổng điểm Rubric: {{ r1_total + r2_total }}/40</span>
+      </div>
+
+      <div class="eval-two-cols">
+        <div class="eval-col strength-box">
+          <h3>✅ Kiến thức & Kỹ năng đã tiếp thu được</h3>
+
+          {% if ns.strong_steps %}
+          <p class="eval-subhead">1. Nắm vững lý thuyết & quy trình tại các bước:</p>
+          <ul class="eval-list">
+            {% for st in ns.strong_steps %}
+            <li><b>Bước {{ st.n }} ({{ st.en }} – {{ st.title }}):</b> Đạt {{ st.score }}/{{ st.total }} câu trắc nghiệm.</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          {% if ns.strong_skills %}
+          <p class="eval-subhead">2. Năng lực thực hành & phẩm chất đạt mức Tốt – Xuất sắc:</p>
+          <ul class="eval-list">
+            {% for sk in ns.strong_skills %}
+            <li><b>{{ sk.label }} ({{ sk.pts }}/4đ):</b> {{ sk.desc }}.</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          {% if ans_map.get('learned') %}
+          <p class="eval-subhead">3. Kiến thức cốt lõi học sinh tự đúc kết:</p>
+          <blockquote class="eval-quote">{{ ans_map.get('learned') }}</blockquote>
+          {% endif %}
+
+          {% if not ns.strong_steps and not ns.strong_skills and not ans_map.get('learned') %}
+          <p class="note">Học sinh cần hoàn thành đầy đủ bài kiểm tra và phiếu tự đánh giá ở Bước 5 để hiển thị tổng hợp.</p>
+          {% endif %}
+        </div>
+
+        <div class="eval-col improve-box">
+          <h3>⚠️ Hạn chế cần khắc phục & Giải pháp cải tiến</h3>
+
+          {% if ns.weak_steps %}
+          <p class="eval-subhead">1. Nội dung lý thuyết cần củng cố thêm:</p>
+          <ul class="eval-list">
+            {% for wst in ns.weak_steps %}
+            <li><b>Bước {{ wst.n }} ({{ wst.en }} – {{ wst.title }}):</b> Mới đạt {{ wst.score }}/{{ wst.total }} câu — cần xem lại phần kiến thức khoa học và giải thích đáp án của bước này.</li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="eval-subhead">1. Mức độ nắm vững lý thuyết:</p>
+          <p class="eval-ok-note">Đã vượt qua tất cả bài kiểm tra kiến thức 5 bước với tỷ lệ đạt chuẩn cao.</p>
+          {% endif %}
+
+          {% if ns.weak_skills %}
+          <p class="eval-subhead">2. Tiêu chí kỹ thuật / kỹ năng còn hạn chế (mức 1–2 điểm):</p>
+          <ul class="eval-list">
+            {% for wsk in ns.weak_skills %}
+            <li>
+              <b>{{ wsk.label }} ({{ wsk.pts }}/4đ):</b> {{ wsk.desc }}.
+              {% if wsk.key == 'ph' %}
+              <span class="remedy">→ Khắc phục: Tiếp tục ủ bánh nơi thoáng khí thêm 1–2 tuần để CO₂ trung hòa kiềm dư, đo lại giấy quỳ đạt xanh lơ (pH 8,5–9,5) mới sử dụng.</span>
+              {% elif wsk.key == 'structure' %}
+              <span class="remedy">→ Khắc phục: Khuấy đều tay một chiều đủ thời gian để hỗn hợp đạt rõ vệt Trace trước khi đổ khuôn; tránh ủ nơi quá nóng hoặc gió lùa mạnh gây nứt.</span>
+              {% elif wsk.key == 'foam' %}
+              <span class="remedy">→ Khắc phục: Đảm bảo cân đúng tỷ lệ 25 g dầu dừa và khuấy nhũ hóa hoàn toàn để xà phòng tạo bọt mịn, sạch dầu tốt.</span>
+              {% elif wsk.key == 'scent_color' %}
+              <span class="remedy">→ Khắc phục: Lọc kỹ dầu ăn thải qua nhiều lớp giấy lọc trước khi làm và chỉ cho nước ép nho, tinh dầu vào sau khi đã đạt Trace.</span>
+              {% elif wsk.key == 'safety' %}
+              <span class="remedy">→ Khắc phục: Luôn đeo đủ kính bảo hộ, găng tay cao su và tuân thủ tuyệt đối quy tắc đổ từ từ NaOH vào nước.</span>
+              {% elif wsk.key == 'understanding' %}
+              <span class="remedy">→ Khắc phục: Ôn lại phương trình xà phòng hóa, vai trò superfat 5% và cơ chế tạo hạt micelle làm sạch vết bẩn.</span>
+              {% else %}
+              <span class="remedy">→ Khắc phục: Ghi chép đầy đủ nhật ký nhiệt độ, thời gian khuấy và trao đổi thêm với giáo viên/nhóm ở mẻ thực hành tiếp theo.</span>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          {% if ans_map.get('unclear') %}
+          <p class="eval-subhead">3. Vấn đề học sinh còn băn khoăn cần hỗ trợ:</p>
+          <blockquote class="eval-quote warn">{{ ans_map.get('unclear') }}</blockquote>
+          {% endif %}
+
+          {% if ans_map.get('lesson') %}
+          <p class="eval-subhead">4. Kế hoạch cải tiến cho mẻ tiếp theo:</p>
+          <blockquote class="eval-quote">{{ ans_map.get('lesson') }}</blockquote>
+          {% endif %}
+        </div>
+      </div>
+    </article>
+
+    <!-- PHIẾU THU HOẠCH CHI TIẾT -->
+    <article class="card edp-sec pdf-block">
+      <h2>📋 Nhật ký thu hoạch & Phản hồi của học sinh</h2>
+      <div class="summary-answers">
+        {% for fq in feedback_questions %}
+        {% if fq.key not in ['class_name', 'school'] %}
+        {% set val_txt = ans_map.get(fq.key, '') %}
+        {% if val_txt or fq.required %}
+        <div class="ans-block">
+          <h3>{{ fq.label }}</h3>
+          <p>{{ val_txt or 'Chưa ghi nội dung.' }}</p>
+        </div>
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+      </div>
+    </article>
+
+    <!-- CHI TIẾT 2 BẢNG RUBRIC -->
+    {% for tbl, saved_scores, t_score, t_grade in [
+      (rubric_1, r1_scores, r1_total, r1_grade),
+      (rubric_2, r2_scores, r2_total, r2_grade)
+    ] %}
+    <article class="card edp-sec pdf-block">
+      <div class="sec-head-row">
+        <h2>📊 {{ tbl.title }}</h2>
+        <span class="badge-score">Tổng: {{ t_score }}/{{ tbl.max }} điểm · {{ t_grade }}</span>
+      </div>
+      <div class="table-scroll">
+        <table class="summary-rubric-table">
+          <thead>
+            <tr>
+              <th>Tiêu chí đánh giá</th>
+              <th>Mức đạt được</th>
+              <th class="col-pts">Điểm</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in tbl.criteria %}
+            {% set pts = saved_scores.get(c.key, 0)|int %}
+            <tr>
+              <td><b>{{ c.label }}</b></td>
+              <td>{{ c.levels[pts - 1] if 1 <= pts <= 4 else 'Chưa tự đánh giá' }}</td>
+              <td class="col-pts"><b>{{ pts }}/4</b></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+    {% endfor %}
+
+    <!-- KHUNG XÁC NHẬN & CHỮ KÝ -->
+    <footer class="card edp-sec sign-footer pdf-block">
+      <div class="sign-box">
+        <p><b>Học sinh thực hiện</b></p>
+        <small>(Ký và ghi rõ họ tên)</small>
+        <div class="sign-space"></div>
+        <span>{{ cur_user.get('name') or cur_user.get('display_name') or '' }}</span>
+      </div>
+      <div class="sign-box">
+        <p><b>Nhận xét & Xác nhận của Giáo viên hướng dẫn</b></p>
+        <small>(Ký và ghi rõ họ tên)</small>
+        <div class="sign-space"></div>
+        <span>......................................................</span>
+      </div>
+    </footer>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".mini-bar i[data-width]").forEach(function (el) {
+    el.style.width = (el.dataset.width || 0) + "%";
+  });
+
+  var btnPdf = document.getElementById("btn-download-pdf");
+  var exportArea = document.getElementById("pdf-export-area");
+
+  if (btnPdf && exportArea) {
+    btnPdf.addEventListener("click", async function () {
+      if (!window.html2pdf) {
+        window.print();
+        return;
+      }
+
+      var rawName = (btnPdf.dataset.student || "Hoc_Vien").trim();
+      var safeName = rawName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d").replace(/Đ/g, "D")
+        .replace(/[^a-zA-Z0-9_-]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "Hoc_Vien";
+
+      var oldText = btnPdf.textContent;
+      btnPdf.disabled = true;
+      btnPdf.textContent = "⏳ Đang tạo file PDF...";
+      exportArea.classList.add("is-exporting-pdf");
+
+      try {
+        var opt = {
+          margin: [8, 8, 8, 8],
+          filename: "Ho_So_EDP_Moc_Dong_" + safeName + ".pdf",
+          image: { type: "jpeg", quality: 0.96 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#F8F4EC",
+            scrollY: 0
+          },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+        };
+
+        await window.html2pdf().set(opt).from(exportArea).save();
+      } catch (err) {
+        window.print();
+      } finally {
+        exportArea.classList.remove("is-exporting-pdf");
+        btnPdf.disabled = false;
+        btnPdf.textContent = oldText;
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

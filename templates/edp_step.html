@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+{% block title %}Bước {{ step.n }}: {{ step.title }} · {{ brand }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+{% endblock %}
+{% block content %}
+<section class="section edp-wrap">
+  <a class="back-link" href="{{ url_for('learning.edp_home') }}">← Tổng quan 5 bước</a>
+
+  <div class="edp-statusbar">
+    <span class="days-pill big">Còn {{ status.days_left }} ngày</span>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress.percent }}"><i data-width="{{ progress.percent }}"></i></div>
+    <span class="progress-text">{{ progress.completed_count }}/{{ total }} bước</span>
+  </div>
+
+  <ol class="stepper" aria-label="Các bước EDP">
+    {% for s in steps %}
+    {% set done = s.n in progress.completed_steps %}
+    {% set open = s.n == 1 or (s.n - 1) in progress.completed_steps or done %}
+    <li class="{{ 'current' if s.n == step.n }} {{ 'done' if done }}">
+      {% if open %}<a href="{{ url_for('learning.edp_step', n=s.n) }}" title="{{ s.title }}">{{ '✓' if done else s.n }}<span>{{ s.en }}</span></a>
+      {% else %}<span class="lockd" title="Chưa mở">🔒<span>{{ s.en }}</span></span>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+
+  <header class="step-head">
+    <small>BƯỚC {{ step.n }}/{{ total }} · {{ step.en }}</small>
+    <h1>{{ step.icon }} {{ step.title }}</h1>
+    <p class="lead-sm">{{ step.short }}</p>
+    {% if is_done %}<p class="form-msg ok">Bạn đã hoàn thành bước này. Có thể xem lại hoặc cập nhật câu trả lời bất cứ lúc nào.</p>{% endif %}
+  </header>
+
+  {% if step.image %}
+  <figure class="step-hero-fig card">
+    <img src="{{ step.image }}" alt="{{ step.image_caption or step.title }}"
+         onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+    <div class="img-placeholder" hidden>
+      <span>🖼️ Vị trí ảnh minh họa chính Bước {{ step.n }}</span>
+      <code>{{ step.image }}</code>
+    </div>
+    {% if step.image_caption %}<figcaption>{{ step.image_caption }}</figcaption>{% endif %}
+  </figure>
+  {% endif %}
+
+  <article class="card edp-sec">
+    <h2>🎯 Mục tiêu học tập</h2>
+    <ul class="leaf">{% for o in step.objectives %}<li>{{ o|safe }}</li>{% endfor %}</ul>
+  </article>
+
+  <article class="card edp-sec">
+    <h2>🔬 Kiến thức khoa học / kỹ thuật</h2>
+    {% for k in step.knowledge %}
+    <div class="know">
+      <h3>{{ k.title|safe }}</h3>
+      <div class="know-body">{{ k.body|safe }}</div>
+    </div>
+    {% endfor %}
+  </article>
+
+  <article class="card edp-sec">
+    <h2>🛠️ Hướng dẫn thực hiện chi tiết</h2>
+    <div class="inst-list {{ 'is-ordered' if step.ordered }}">
+      {% for ins in step.instructions %}
+      <div class="inst-card">
+        <div class="inst-head">
+          <span class="inst-badge">{{ loop.index if step.ordered else '🌿' }}</span>
+          <h3>{{ ins.title|safe }}</h3>
+        </div>
+        <div class="inst-body">{{ ins.detail|safe }}</div>
+        {% if ins.image %}
+        <figure class="inst-figure">
+          <img src="{{ ins.image }}" alt="{{ ins.caption or ins.title }}"
+               onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+          <div class="img-placeholder" hidden>
+            <span>📸 Chèn ảnh minh họa thao tác tại đường dẫn:</span>
+            <code>{{ ins.image }}</code>
+          </div>
+          {% if ins.caption %}<figcaption>{{ ins.caption }}</figcaption>{% endif %}
+        </figure>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if step.checklist %}
+    <div class="kit-checklist">
+      <h3>☑️ {{ step.checklist_title or 'Danh sách kiểm tra' }}</h3>
+      <ul>
+        {% for item in step.checklist %}
+        <li>
+          <label class="check-row">
+            {% if is_done %}
+            <input type="checkbox" checked>
+            {% else %}
+            <input type="checkbox">
+            {% endif %}
+            <span>{{ item }}</span>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if step.calculator %}
+    <div class="calc" id="calc" data-sap-oil="{{ calc.sap_oil }}" data-sap-coco="{{ calc.sap_coco }}" data-water-ratio="{{ calc.water_ratio }}">
+      <h3>🧮 Máy tính công thức xà phòng (chuẩn bộ Kit)</h3>
+      <p class="note">Mặc định theo đúng thông số 1 bộ Kit ({{ calc.default_oil }} g dầu thải + {{ calc.default_coco }} g dầu dừa, superfat {{ calc.default_sf }}%).</p>
+      <div class="calc-grid">
+        <label class="field">Dầu ăn thải đã lọc (g)<input type="number" id="c-oil" value="{{ calc.default_oil }}" min="0" step="1"></label>
+        <label class="field">Dầu dừa (g)<input type="number" id="c-coco" value="{{ calc.default_coco }}" min="0" step="1"></label>
+        <label class="field">Superfat (%)<input type="number" id="c-sf" value="{{ calc.default_sf }}" min="3" max="8" step="0.5"></label>
+      </div>
+      <div class="calc-out">
+        <div><small>Khối lượng NaOH</small><b id="o-naoh">–</b></div>
+        <div><small>Nước pha xút (Cốc B)</small><b id="o-water">–</b></div>
+        <div><small>Tổng dầu</small><b id="o-total">–</b></div>
+      </div>
+      <p class="note">Công thức: m<sub>NaOH</sub> = (m<sub>dầu thải</sub>×{{ calc.sap_oil }} + m<sub>dầu dừa</sub>×{{ calc.sap_coco }})×(1 − superfat); m<sub>nước</sub> ≈ m<sub>NaOH</sub>×{{ calc.water_ratio }}.</p>
+    </div>
+    {% endif %}
+  </article>
+
+  <article class="card edp-sec safety {{ 'high' if step.safety_level == 'high' }}">
+    <h2>⚠️ Lưu ý an toàn{% if step.safety_level == 'high' %} <span class="tagr">Cảnh báo mức cao nhất</span>{% endif %}</h2>
+    <ul class="warn">{% for s in step.safety %}<li>{{ s|safe }}</li>{% endfor %}</ul>
+  </article>
+
+  <!-- KHUNG CHATBOT AI RIÊNG CHO TỪNG BƯỚC -->
+  <article class="card edp-sec inline-bot-card" id="step-bot" data-step-id="{{ step.n }}">
+    <div class="sec-head-row">
+      <div>
+        <h2>🤖 Trợ lý AI đồng hành Bước {{ step.n }} ({{ step.en }})</h2>
+        <p class="note">Mộc Đông Bot đã nắm rõ toàn bộ kiến thức & quy tắc an toàn của <b>Bước {{ step.n }}</b>. Bấm câu hỏi gợi ý hoặc nhắn tình huống thực tế của bạn:</p>
+      </div>
+      <span class="badge-score">Trực tuyến · Bước {{ step.n }}/{{ total }}</span>
+    </div>
+
+    {% if step.quick_prompts %}
+    <div class="inline-quick-list" aria-label="Câu hỏi gợi ý Bước {{ step.n }}">
+      {% for qp in step.quick_prompts %}
+      <button type="button" class="quick-chip inline-chip" data-prompt="{{ qp }}">💬 {{ qp }}</button>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div id="inline-chat-log" class="inline-chat-log">
+      <div class="bubble bot">Chào bạn! Mình là Mộc Đông Bot đang hỗ trợ bạn tại <b>Bước {{ step.n }}: {{ step.title }}</b>. Bạn đang vướng chỗ nào cứ hỏi ngay bên dưới nhé 🌿</div>
+    </div>
+
+    <div class="inline-chat-input">
+      <input id="inline-chat-text" type="text" maxlength="500" placeholder="Ví dụ: Khuấy bao lâu thì đạt Trace? / Dầu dừa bị đông thì làm sao?...">
+      <button id="inline-chat-send" type="button" class="btn sm">Gửi câu hỏi</button>
+    </div>
+  </article>
+
+  <article class="card edp-sec">
+    <h2>🌈 Trải nghiệm STEAM</h2>
+    <div class="steam">
+      {% for t in step.steam %}
+      <div class="steam-item"><b class="steam-k">{{ t.k }}</b><div><h3>{{ t.label }}</h3><p>{{ t.text }}</p></div></div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <form method="post" action="{{ url_for('learning.edp_complete', n=step.n) }}" enctype="multipart/form-data" id="step-form">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+
+    {% if step.quiz %}
+    <article class="card edp-sec" id="quiz-sec">
+      <div class="sec-head-row">
+        <h2>📝 Kiểm tra nhanh kiến thức Bước {{ step.n }}</h2>
+        {% if saved_quiz and saved_quiz.score is defined %}
+        <span class="badge-score">Điểm đã lưu: {{ saved_quiz.score }}/{{ saved_quiz.total }}</span>
+        {% endif %}
+      </div>
+      <p class="note">Trả lời đủ {{ step.quiz|length }} câu bên dưới trước khi bấm hoàn thành bước nhé.</p>
+
+      {% set prev_ans = saved_quiz.answers if saved_quiz and saved_quiz.answers else [] %}
+      <div class="quiz-list">
+        {% for q in step.quiz %}
+        {% set q_idx = loop.index0 %}
+        <div class="quiz-item" data-q-index="{{ q_idx }}" data-correct="{{ q.correct }}">
+          <p class="quiz-q"><b>Câu {{ loop.index }}:</b> {{ q.q }}</p>
+          <div class="quiz-opts">
+            {% for opt in q.options %}
+            {% set opt_idx = loop.index0 %}
+            <label class="quiz-opt">
+              {% if prev_ans|length > q_idx and prev_ans[q_idx] == opt_idx %}
+              <input type="radio" name="quiz_{{ q_idx }}" value="{{ opt_idx }}" required checked>
+              {% else %}
+              <input type="radio" name="quiz_{{ q_idx }}" value="{{ opt_idx }}" required>
+              {% endif %}
+              <span><b>{{ ['A', 'B', 'C', 'D'][opt_idx] }}.</b> {{ opt }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          <p class="quiz-explain" hidden>💡 {{ q.explain }}</p>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="quiz-bar">
+        <button type="button" class="btn ghost sm" id="btn-check-quiz">🔍 Kiểm tra đáp án & xem giải thích</button>
+        <span id="quiz-live-result" class="note"></span>
+      </div>
+    </article>
+    {% endif %}
+
+    {% if step.n == 5 %}
+    {% set ans_map = saved_eval.feedback_answers if saved_eval and saved_eval.feedback_answers else {} %}
+    {% set r1_saved = saved_eval.rubric_1.scores if saved_eval and saved_eval.rubric_1 else {} %}
+    {% set r2_saved = saved_eval.rubric_2.scores if saved_eval and saved_eval.rubric_2 else {} %}
+
+    <article class="card edp-sec" id="eval-sec">
+      <h2>📋 Phiếu thu hoạch & cải tiến sản phẩm</h2>
+      <div class="feedback-grid">
+        {% for fq in feedback_questions %}
+        <label class="field {{ 'full' if fq.type == 'textarea' }}">
+          <span>{{ fq.label }}{% if fq.required %} <b class="req">*</b>{% endif %}</span>
+          {% if fq.type == 'textarea' %}
+            {% if fq.required %}
+            <textarea name="{{ fq.key }}" rows="3" maxlength="{{ fq.maxlength }}" placeholder="{{ fq.hint }}" required>{{ ans_map.get(fq.key, '') }}</textarea>
+            {% else %}
+            <textarea name="{{ fq.key }}" rows="3" maxlength="{{ fq.maxlength }}" placeholder="{{ fq.hint }}">{{ ans_map.get(fq.key, '') }}</textarea>
+            {% endif %}
+          {% else %}
+            {% if fq.required %}
+            <input type="text" name="{{ fq.key }}" maxlength="{{ fq.maxlength }}" placeholder="{{ fq.hint }}" value="{{ ans_map.get(fq.key, '') }}" required>
+            {% else %}
+            <input type="text" name="{{ fq.key }}" maxlength="{{ fq.maxlength }}" placeholder="{{ fq.hint }}" value="{{ ans_map.get(fq.key, '') }}">
+            {% endif %}
+          {% endif %}
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="upload-wrap">
+        <label class="field">
+          <span>📸 Ảnh chụp bánh xà phòng thành phẩm (JPG, PNG, WEBP – tối đa 5 MB) {% if not saved_eval.image_url %}<b class="req">*</b>{% endif %}</span>
+        </label>
+        <div class="dropzone" id="dropzone">
+          {% if saved_eval.image_url %}
+          <input type="file" id="product-image" name="product_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+          {% else %}
+          <input type="file" id="product-image" name="product_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
+          {% endif %}
+          <p id="dropzone-text">Kéo thả ảnh bánh xà phòng vào đây hoặc <b>bấm để chọn ảnh</b></p>
+          <small class="note">Lưu ý an toàn: chỉ chụp bánh xà phòng, không chụp khuôn mặt hay thông tin cá nhân.</small>
+          {% if saved_eval.image_url %}
+          <img id="img-preview" class="img-preview" src="{{ saved_eval.image_url }}" alt="Ảnh sản phẩm">
+          {% else %}
+          <img id="img-preview" class="img-preview" src="" alt="Ảnh sản phẩm" hidden>
+          {% endif %}
+        </div>
+        <p id="img-error" class="form-msg error" hidden></p>
+      </div>
+    </article>
+
+    {% for tbl, saved_scores in [(rubric_1, r1_saved), (rubric_2, r2_saved)] %}
+    <article class="card edp-sec rubric-sec" data-rubric-id="{{ tbl.id }}" data-rubric-max="{{ tbl.max }}">
+      <div class="sec-head-row">
+        <div>
+          <h2>📊 {{ tbl.title }}</h2>
+          <p class="note">{{ tbl.subtitle }}</p>
+        </div>
+        <div class="rubric-score-box">
+          <b id="score-{{ tbl.id }}">0</b>/{{ tbl.max }} điểm
+          <span id="grade-{{ tbl.id }}" class="grade-pill">Chưa chấm</span>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="rubric-table">
+          <thead>
+            <tr>
+              <th>Tiêu chí</th>
+              <th>1 · Chưa đạt</th>
+              <th>2 · Cần cải thiện</th>
+              <th>3 · Đạt</th>
+              <th>4 · Tốt / Xuất sắc</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in tbl.criteria %}
+            {% set cur_val = saved_scores.get(c.key, 0)|int %}
+            <tr>
+              <td class="crit-name">{{ c.label }}</td>
+              {% for lvl in c.levels %}
+              {% set pts = loop.index %}
+              <td>
+                <label class="rubric-cell">
+                  {% if cur_val == pts %}
+                  <input type="radio" name="{{ tbl.id }}_{{ c.key }}" value="{{ pts }}" required checked>
+                  {% else %}
+                  <input type="radio" name="{{ tbl.id }}_{{ c.key }}" value="{{ pts }}" required>
+                  {% endif %}
+                  <span class="pts-tag">{{ pts }}đ</span>
+                  <span class="lvl-desc">{{ lvl }}</span>
+                </label>
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+    {% endfor %}
+    {% endif %}
+
+    <div class="step-actions">
+      {% if prev_step %}<a class="btn ghost" href="{{ url_for('learning.edp_step', n=prev_step.n) }}">← Bước {{ prev_step.n }}</a>{% else %}<span></span>{% endif %}
+
+      <div class="action-right">
+        <button class="btn" type="submit">
+          {% if step.n == total %}
+          🏁 Lưu hồ sơ & Xem tổng kết
+          {% elif is_done %}
+          💾 Cập nhật & Sang Bước {{ next_step.n }} →
+          {% else %}
+          ✔ Hoàn thành Bước {{ step.n }}
+          {% endif %}
+        </button>
+        {% if is_done and next_step %}
+        <a class="btn ghost" href="{{ url_for('learning.edp_step', n=next_step.n) }}">Bỏ qua, sang Bước {{ next_step.n }} →</a>
+        {% elif is_done and step.n == total %}
+        <a class="btn ghost" href="{{ url_for('learning.edp_summary') }}">Xem trang tổng kết →</a>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".progress i[data-width]").forEach(function (el) {
+    el.style.width = (el.dataset.width || 0) + "%";
+  });
+
+  function renderMath() {
+    if (window.renderMathInElement) {
+      renderMathInElement(document.querySelector("main"), {
+        delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}],
+        throwOnError: false
+      });
+    }
+  }
+  var tries = 0;
+  (function waitMath() { if (window.renderMathInElement) renderMath(); else if (tries++ < 50) setTimeout(waitMath, 100); })();
+
+  var calc = document.getElementById("calc");
+  if (calc) {
+    var sapOil = parseFloat(calc.dataset.sapOil) || 0.135;
+    var sapCoco = parseFloat(calc.dataset.sapCoco) || 0.183;
+    var wRatio = parseFloat(calc.dataset.waterRatio) || 1.84;
+    var val = function (id) { return Math.max(0, parseFloat(document.getElementById(id).value) || 0); };
+    var updCalc = function () {
+      var oil = val("c-oil"), coco = val("c-coco"), sf = Math.min(val("c-sf"), 20) / 100;
+      var naoh = (oil * sapOil + coco * sapCoco) * (1 - sf);
+      document.getElementById("o-naoh").textContent = naoh.toFixed(1) + " g";
+      document.getElementById("o-water").textContent = (naoh * wRatio).toFixed(1) + " g";
+      document.getElementById("o-total").textContent = (oil + coco).toFixed(0) + " g";
+    };
+    calc.addEventListener("input", updCalc);
+    updCalc();
+  }
+
+  var btnCheck = document.getElementById("btn-check-quiz");
+  if (btnCheck) {
+    btnCheck.addEventListener("click", function () {
+      var items = document.querySelectorAll(".quiz-item");
+      var correctCount = 0, answeredCount = 0;
+      items.forEach(function (item) {
+        var right = item.dataset.correct;
+        var checked = item.querySelector("input[type='radio']:checked");
+        var exp = item.querySelector(".quiz-explain");
+        item.classList.remove("is-right", "is-wrong");
+        if (checked) {
+          answeredCount++;
+          if (checked.value === right) {
+            correctCount++;
+            item.classList.add("is-right");
+          } else {
+            item.classList.add("is-wrong");
+          }
+          if (exp) exp.hidden = false;
+        }
+      });
+      var out = document.getElementById("quiz-live-result");
+      if (answeredCount < items.length) {
+        out.textContent = "Bạn mới chọn " + answeredCount + "/" + items.length + " câu. Hãy chọn đủ để xem hết giải thích nhé!";
+      } else {
+        out.textContent = "Kết quả thử: " + correctCount + "/" + items.length + " câu đúng.";
+      }
+    });
+  }
+
+  var fileInput = document.getElementById("product-image");
+  var dropzone = document.getElementById("dropzone");
+  var preview = document.getElementById("img-preview");
+  var imgErr = document.getElementById("img-error");
+
+  function handleFile(file) {
+    if (!file) return;
+    imgErr.hidden = true;
+    var okTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (okTypes.indexOf(file.type) === -1) {
+      imgErr.textContent = "Chỉ hỗ trợ file ảnh JPG, PNG hoặc WEBP.";
+      imgErr.hidden = false;
+      fileInput.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      imgErr.textContent = "Ảnh lớn hơn 5 MB. Vui lòng chọn ảnh nhẹ hơn.";
+      imgErr.hidden = false;
+      fileInput.value = "";
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      preview.src = e.target.result;
+      preview.hidden = false;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  if (fileInput && dropzone) {
+    fileInput.addEventListener("change", function () { handleFile(fileInput.files[0]); });
+    ["dragover", "dragleave", "drop"].forEach(function (ev) {
+      dropzone.addEventListener(ev, function (e) {
+        e.preventDefault();
+        dropzone.classList.toggle("dragover", ev === "dragover");
+        if (ev === "drop" && e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          handleFile(e.dataTransfer.files[0]);
+        }
+      });
+    });
+  }
+
+  function calcGrade(total) {
+    if (total >= 18) return "Xuất sắc";
+    if (total >= 16) return "Đạt chuẩn";
+    if (total >= 10) return "Cần cải thiện";
+    return "Chưa đạt";
+  }
+
+  document.querySelectorAll(".rubric-sec").forEach(function (sec) {
+    var id = sec.dataset.rubricId;
+    var scoreEl = document.getElementById("score-" + id);
+    var gradeEl = document.getElementById("grade-" + id);
+    var updateRubric = function () {
+      var sum = 0, count = 0;
+      sec.querySelectorAll("input[type='radio']:checked").forEach(function (r) {
+        sum += parseInt(r.value, 10) || 0;
+        count++;
+      });
+      scoreEl.textContent = sum;
+      gradeEl.textContent = count === 0 ? "Chưa chấm" : calcGrade(sum);
+    };
+    sec.addEventListener("change", updateRubric);
+    updateRubric();
+  });
+});
+</script>
+{% endblock %}

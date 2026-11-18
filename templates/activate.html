@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Kích hoạt học tập · {{ brand }}{% endblock %}
+{% block content %}
+<section class="auth-wrap">
+  <div class="auth-card">
+    <h1>Kích hoạt học tập</h1>
+
+    {% if status.active %}
+    <div class="days-badge" role="status">
+      <strong>{{ status.days_left }}</strong> ngày học còn lại
+      <small>Hết hạn: {{ status.expires_at.astimezone().strftime('%d/%m/%Y') }}</small>
+    </div>
+    <p class="auth-sub">Tài khoản của bạn đã được kích hoạt. Hãy vào học thôi!</p>
+    <a class="btn" href="{{ url_for('learning.edp_home') }}">Vào học EDP</a>
+
+    {% else %}
+    <p class="auth-sub">
+      Nhập mã in trên bao bì sản phẩm {{ brand }} để mở khóa phần học làm xà phòng.
+      Mỗi mã dùng được <strong>1 lần</strong> cho <strong>1 tài khoản</strong>, có hiệu lực <strong>30 ngày</strong>.
+    </p>
+
+    {% if reason == 'expired' %}
+    <p class="form-msg error" role="alert">Mã kích hoạt trước đó của bạn đã hết hạn. Hãy nhập mã mới để học tiếp.</p>
+    {% endif %}
+
+    <form class="auth-form" method="post" action="{{ url_for('learning.activate') }}" autocomplete="off">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <label class="field">Mã kích hoạt
+        <input class="code-input" type="text" name="code" maxlength="40" placeholder="VD: MD-XXXX-XXXX"
+               autocapitalize="characters" spellcheck="false" required {{ 'disabled' if locked }}>
+      </label>
+      <button class="btn" type="submit" {{ 'disabled' if locked }}>Kích hoạt</button>
+    </form>
+
+    {% if error %}
+    <p class="form-msg error" role="alert">{{ error }}</p>
+    {% endif %}
+    {% endif %}
+
+    <p class="auth-foot">Chưa có mã? Bạn vẫn xem được toàn bộ website. <a href="{{ url_for('main.index') }}">Về trang chủ</a></p>
+  </div>
+</section>
+{% endblock %}

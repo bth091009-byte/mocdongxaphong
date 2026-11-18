@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Học EDP · {{ brand }}{% endblock %}
+{% block content %}
+<section class="section edp-wrap">
+  <h1>Học làm xà phòng theo 5 bước EDP</h1>
+  <p class="lead-sm">Quy trình thiết kế kỹ thuật (Engineering Design Process) giúp bạn biến dầu ăn đã qua sử dụng thành bánh xà phòng an toàn, làm sạch tốt và thân thiện với môi trường.</p>
+
+  <div class="edp-top">
+    <div class="days-badge" role="status">
+      <strong>{{ status.days_left }}</strong> ngày học còn lại
+      <small>Hết hạn: {{ status.expires_at.astimezone().strftime('%d/%m/%Y') }}</small>
+    </div>
+    <div class="progress-card">
+      <div class="progress-label"><b>Tiến độ</b><span>{{ progress.completed_count }}/{{ total }} bước · {{ progress.percent }}%</span></div>
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress.percent }}">
+        <i style="width:{{ progress.percent }}%"></i>
+      </div>
+      {% if progress.completed_all %}
+      <a class="btn" href="{{ url_for('learning.edp_summary') }}">Xem tổng kết khóa học</a>
+      {% else %}
+      <a class="btn" href="{{ url_for('learning.edp_step', n=next_step) }}">
+        {{ 'Tiếp tục: Bước ' ~ next_step if progress.completed_count else 'Bắt đầu học: Bước 1' }}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <ol class="edp-list">
+    {% for s in steps %}
+    <li class="edp-item {{ 'done' if s.done }} {{ 'locked' if not s.unlocked }}">
+      <span class="edp-num" aria-hidden="true">{{ '✓' if s.done else s.n }}</span>
+      <div class="edp-body">
+        <small>BƯỚC {{ s.n }} · {{ s.en }}</small>
+        <h3>{{ s.icon }} {{ s.title }}</h3>
+        <p>{{ s.short }}</p>
+      </div>
+      {% if s.unlocked %}
+      <a class="btn sm {{ 'ghost' if s.done }}" href="{{ url_for('learning.edp_step', n=s.n) }}">{{ 'Xem lại' if s.done else 'Vào học' }}</a>
+      {% else %}
+      <span class="lock-note">🔒 Hoàn thành Bước {{ s.n - 1 }} để mở</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

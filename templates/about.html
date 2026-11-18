@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Câu chuyện Mộc Đông | Xà phòng handmade{% endblock %}
+{% block desc %}Câu chuyện của Mộc Đông: xà phòng handmade làm từ phương pháp xà phòng hóa truyền thống, dịu nhẹ cho làn da mỗi ngày.{% endblock %}
+{% block content %}
+<article class="section narrow story">
+  <h1>Câu chuyện Mộc Đông</h1>
+
+  <p class="lead">Mộc Đông không bắt đầu từ một ý tưởng kinh doanh ồn ào.</p>
+
+  <p>Nó bắt đầu từ những lần đứng trước gương, nhìn làn da sau ngày dài bị bào mòn bởi bụi bặm, ánh nắng và những sản phẩm làm sạch quá mạnh. Cảm giác khô căng, rát nhẹ ấy khiến mình tự hỏi:</p>
+
+  <blockquote>“Có cách nào để làm sạch mà vẫn giữ được sự dịu dàng cho da không?”</blockquote>
+
+  <p>Từ câu hỏi ấy, Mộc Đông ra đời.</p>
+
+  <p>Chúng mình chọn đi theo con đường thủ công – chậm rãi và có chủ đích. Mỗi bánh xà phòng Yến mạch &amp; Nho được tạo ra từ quá trình xà phòng hóa truyền thống, nơi dầu dừa và dầu ô liu được kết hợp với NaOH theo tỉ lệ được tính toán kỹ lưỡng, để phản ứng diễn ra hoàn toàn. Không còn kiềm dư, không còn sự gắt gỏng. Chỉ còn lại thanh xà phòng sạch sẽ nhưng vẫn giữ được lớp ẩm tự nhiên mà da cần.</p>
+
+  <p>Bột yến mạch được thêm vào như một người bạn đồng hành thầm lặng – giúp làm mềm, dịu nhẹ và mang lại cảm giác dễ chịu khi chạm vào da. Tinh dầu nho không chỉ tạo hương, mà còn góp phần mang đến cảm giác tươi mới, thanh thoát, như đang mang theo một chút nắng sớm và gió nhẹ của vườn nho.</p>
+
+  <p>Chúng mình không theo đuổi sự hoàn hảo bóng bẩy.</p>
+
+  <p>Mỗi bánh xà phòng đều mang dấu vết của đôi bàn tay – có thể hơi khác nhau một chút về hình dạng, về độ đậm của màu tím nho, nhưng đều được làm với cùng một sự chỉn chu và tận tâm.</p>
+
+  <p>Mộc Đông tin rằng việc chăm sóc bản thân không nhất thiết phải ồn ào hay phức tạp. Đôi khi chỉ cần một thanh xà phòng dịu nhẹ, một khoảnh khắc làm ướt da, tạo bọt và hít thở chậm lại… cũng đủ để nhắc mình rằng mình xứng đáng được đối xử tử tế.</p>
+
+  <div class="story-end">
+    <p>Đó chính là lý do Mộc Đông tồn tại.</p>
+    <p>Không phải để trở thành sản phẩm “xịn” nhất.</p>
+    <p class="script">Mà để trở thành người bạn đồng hành nhỏ bé, chân thật và dịu dàng nhất trên hành trình chăm sóc làn da mỗi ngày.</p>
+  </div>
+
+  <div class="icons">
+    <div><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg><span>Handmade</span></div>
+    <div><svg viewBox="0 0 24 24"><path d="M5 19c0-9 6-14 14-14 0 8-5 14-14 14zM5 19l8-8"/></svg><span>Thiên nhiên</span></div>
+    <div><svg viewBox="0 0 24 24"><path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/></svg><span>Dịu nhẹ</span></div>
+  </div>
+
+  <a class="btn" href="{{ url_for('main.product') }}">Xem sản phẩm</a>
+</article>
+{% endblock %}

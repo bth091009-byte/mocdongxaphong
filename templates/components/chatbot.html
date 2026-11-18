@@ -1,0 +1,29 @@
+{% set cur_step = step if step is defined and step else none %}
+<button id="chat-toggle" class="chat-toggle" aria-label="Mở trò chuyện với Mộc Đông Bot">🍇</button>
+<section id="chat-box" class="chat-box" hidden aria-label="Mộc Đông Bot"
+         data-current-step="{{ cur_step.n if cur_step else 0 }}">
+  <div class="chat-head">
+    <span>Mộc Đông Bot 🌿{% if cur_step %} · Bước {{ cur_step.n }}{% endif %}</span>
+    <button type="button" id="chat-close" class="chat-close" aria-label="Đóng khung chat">✕</button>
+  </div>
+  <div id="chat-log" class="chat-log">
+    <div class="bubble bot">
+      {% if cur_step %}
+      Chào bạn! Mình đang đồng hành cùng bạn ở <b>Bước {{ cur_step.n }} ({{ cur_step.en }})</b>. Bạn cần hỏi gì về bước này cứ nhắn nhé ✨
+      {% else %}
+      Mình là Mộc Đông Bot ạ. Bạn muốn hỏi về cách dùng, thành phần hay bảo quản xà phòng nào? ✨
+      {% endif %}
+    </div>
+  </div>
+  {% if cur_step and cur_step.quick_prompts %}
+  <div id="chat-quick" class="chat-quick" aria-label="Câu hỏi gợi ý">
+    {% for qp in cur_step.quick_prompts %}
+    <button type="button" class="quick-chip" data-prompt="{{ qp }}">{{ qp }}</button>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="chat-input">
+    <input id="chat-text" type="text" maxlength="500" placeholder="Nhập câu hỏi của bạn..." aria-label="Câu hỏi">
+    <button id="chat-send" type="button">Gửi</button>
+  </div>
+</section>
