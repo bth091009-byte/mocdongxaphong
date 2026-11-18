@@ -5,6 +5,9 @@
     }
   },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/app.py" }
+    {
+      "source": "/(.*)",
+      "destination": "/app.py"
+    }
   ]
 }
