@@ -56,5 +56,5 @@
 {% endblock %}
 {% block scripts %}
 <script>window.FIREBASE_CONFIG = {{ firebase_config|tojson }};</script>
-<script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>
+<script type="module" src="/js/auth.js"></script>
 {% endblock %}
